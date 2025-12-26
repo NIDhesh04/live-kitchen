@@ -3,6 +3,8 @@ const mongoose = require('mongoose');
 const http = require('http');
 const { Server } = require("socket.io");
 const cors = require('cors');
+const jwt = require('jsonwebtoken');
+const SECRET_KEY = "my-super-secret-key-123"; // In a real job, hide this in .env!
 
 // Enable mongoose debug mode to see what's happening
 mongoose.set('debug', true);
@@ -53,6 +55,36 @@ io.on('connection', (socket) => {
         console.log('User disconnected');
     });
 });
+// --- AUTHENTICATION ---
+
+// 1. Login Route: User sends Password -> Server gives Token
+app.post('/login', (req, res) => {
+    const { password } = req.body;
+    
+    // Simple hardcoded password check
+    if(password === "chef123") {
+        // Create the badge (valid for 1 hour)
+        const token = jwt.sign({ role: 'kitchen' }, SECRET_KEY, { expiresIn: '1h' });
+        res.json({ success: true, token });
+    } else {
+        res.status(401).json({ success: false, message: "Wrong Password" });
+    }
+});
+
+// 2. Middleware: The Security Guard
+// We put this BEFORE any route we want to protect
+const requireAuth = (req, res, next) => {
+    const token = req.headers['authorization']; // Look for badge in headers
+    
+    if(!token) return res.status(403).json({ error: "No token provided" });
+
+    try {
+        jwt.verify(token, SECRET_KEY); // Check if badge is fake
+        next(); // It's real! Let them pass.
+    } catch(err) {
+        res.status(401).json({ error: "Invalid Token" });
+    }
+}
 
 app.get('/orders', async (req, res) => {
     const orders = await Order.find().sort({ createdAt: -1 });
@@ -67,7 +99,7 @@ app.post('/orders', async (req, res) => {
     res.status(201).json(newOrder);
 });
 
-app.patch('/orders/:id', async (req, res) => {
+app.patch('/orders/:id',requireAuth, async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
     const updatedOrder = await Order.findByIdAndUpdate(id, { status }, { new: true });
