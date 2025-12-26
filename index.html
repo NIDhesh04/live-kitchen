@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Live Kitchen Board</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
+        .order-card { border: 1px solid #ddd; padding: 15px; margin-bottom: 10px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .status-Pending { background-color: #fff3cd; } /* Yellow */
+        .status-Cooking { background-color: #cff4fc; } /* Blue */
+        .status-Ready { background-color: #d1e7dd; }   /* Green */
+        button { cursor: pointer; padding: 5px 10px; margin-left: 5px; }
+    </style>
+</head>
+<body>
+    <h1>🍕 Live Kitchen Monitor</h1>
+    
+    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+        <h3>New Order</h3>
+        <input type="text" id="customer" placeholder="Customer Name">
+        <input type="text" id="item" placeholder="Item (e.g. Pizza)">
+        <button onclick="placeOrder()">Place Order</button>
+    </div>
+
+    <div id="orders-container"></div>
+
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script>
+        // Make sure this matches your server port!
+        const API_URL = 'http://localhost:3000';
+        const socket = io(API_URL);
+
+        const container = document.getElementById('orders-container');
+
+        // 1. Load initial data
+        async function loadOrders() {
+            const res = await fetch(`${API_URL}/orders`);
+            const orders = await res.json();
+            container.innerHTML = ''; 
+            orders.forEach(displayOrder);
+        }
+
+        // 2. Render a single order card
+        function displayOrder(order) {
+            // If card exists, just update it (don't create duplicate)
+            const existing = document.getElementById(order._id);
+            if (existing) {
+                existing.className = `order-card status-${order.status}`;
+                existing.querySelector('.status-text').innerText = order.status;
+                // Re-render buttons based on new status
+                existing.querySelector('.actions').innerHTML = getButtons(order);
+                return;
+            }
+
+            const div = document.createElement('div');
+            div.id = order._id;
+            div.className = `order-card status-${order.status}`;
+            div.innerHTML = `
+                <div>
+                    <strong>${order.item}</strong> for ${order.customerName}
+                    <br><small class="status-text">${order.status}</small>
+                </div>
+                <div class="actions">
+                    ${getButtons(order)}
+                </div>
+            `;
+            container.prepend(div);
+        }
+
+        function getButtons(order) {
+            if (order.status === 'Pending') return `<button onclick="updateStatus('${order._id}', 'Cooking')">Cook</button>`;
+            if (order.status === 'Cooking') return `<button onclick="updateStatus('${order._id}', 'Ready')">Done</button>`;
+            return '✅';
+        }
+
+        // 3. Send New Order to Server
+        async function placeOrder() {
+            const customer = document.getElementById('customer').value;
+            const item = document.getElementById('item').value;
+            if(!customer || !item) return alert("Fill in both fields!");
+
+            await fetch(`${API_URL}/orders`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ customerName: customer, item })
+            });
+            // Clear inputs
+            document.getElementById('customer').value = '';
+            document.getElementById('item').value = '';
+        }
+
+        // 4. Update Status
+        async function updateStatus(id, newStatus) {
+            await fetch(`${API_URL}/orders/${id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: newStatus })
+            });
+        }
+
+        // 5. REAL-TIME LISTENER
+        socket.on('order_updated', (updatedOrder) => {
+            console.log("New update:", updatedOrder);
+            displayOrder(updatedOrder);
+        });
+
+        loadOrders();
+    </script>
+</body>
+</html>
