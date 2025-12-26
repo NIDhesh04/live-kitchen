@@ -11,9 +11,10 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// Try with more detailed error logging
-const mongoUri = 'mongodb+srv://nidheshsoni_db_user:pass123@cluster0.fnbr4ju.mongodb.net/ordersDB?retryWrites=true&w=majority';
-
+// SMART CONNECTION STRING
+// 1. Look for 'DB_URI' in the environment (Render)
+// 2. If not found, use the hardcoded string (Local Laptop)
+const mongoUri = process.env.DB_URI || 'mongodb+srv://nidheshsoni_db_user:pass123@cluster0.fnbr4ju.mongodb.net/ordersDB?retryWrites=true&w=majority';
 mongoose.connect(mongoUri, {
     serverSelectionTimeoutMS: 30000,
     socketTimeoutMS: 75000
