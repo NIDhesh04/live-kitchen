@@ -106,6 +106,12 @@ app.patch('/orders/:id',requireAuth, async (req, res) => {
     io.emit('order_updated', updatedOrder);
     res.json(updatedOrder);
 });
+app.delete('/orders/:id' , requireAuth , async(req,res)=>{
+    const {id} = req.params;
+    await Order.findByIdAndDelete(id);
+    io.emit('order deleted' , id);
+    res.json({success : true});
+});
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
