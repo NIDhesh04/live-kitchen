@@ -159,9 +159,10 @@
         socket.on('order_updated', displayOrder);
         // Remove the card from the screen when server says so
         socket.on('order_deleted', (id) => {
+            console.log("🚀 SOCKET RECEIVED DELETE COMMAND FOR:", id); // <--- This proves the code is new
             const element = document.getElementById(id);
             if (element) {
-                element.remove(); // Poof! It's gone.
+                element.remove(); 
             }
         });
         loadOrders();

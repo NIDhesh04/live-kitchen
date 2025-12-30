@@ -110,7 +110,7 @@ app.delete('/orders/:id' , requireAuth , async(req,res)=>{
     const {id} = req.params;
     await Order.findByIdAndDelete(id);
     console.log(`📢 BROADCASTING DELETE FOR ID: ${id}`);
-    io.emit('order deleted' , id);
+    io.emit('order_deleted' , id);
     res.json({success : true});
 });
 const PORT = process.env.PORT || 3000;
