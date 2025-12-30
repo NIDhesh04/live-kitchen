@@ -109,6 +109,7 @@ app.patch('/orders/:id',requireAuth, async (req, res) => {
 app.delete('/orders/:id' , requireAuth , async(req,res)=>{
     const {id} = req.params;
     await Order.findByIdAndDelete(id);
+    console.log(`📢 BROADCASTING DELETE FOR ID: ${id}`);
     io.emit('order deleted' , id);
     res.json({success : true});
 });
